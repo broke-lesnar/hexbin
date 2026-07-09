@@ -13,6 +13,7 @@ const state = {
     },
     session: {
         streak: 0,
+        highestStreak: 0,
         score: { correct: 0, incorrect: 0 },
         history: []
     },
@@ -25,6 +26,7 @@ const state = {
 const el = {
     body: document.body,
     streakVal: document.getElementById('streak-val'),
+    bestStreakVal: document.getElementById('best-streak-val'),
     scoreVal: document.getElementById('score-val'),
     btnReview: document.getElementById('btn-review'),
     btnSettings: document.getElementById('btn-settings'),
@@ -37,22 +39,39 @@ const el = {
     btnNext: document.getElementById('btn-next'),
     
     modalSettings: document.getElementById('modal-settings'),
-    setTheme: document.getElementById('set-theme'),
     setWidth: document.getElementById('set-width'),
     setInput: document.getElementById('set-input'),
     setPrefix: document.getElementById('set-prefix'),
     setMode: document.getElementById('set-mode'),
     setSource: document.getElementById('set-source'),
     setTarget: document.getElementById('set-target'),
-    groupSource: document.getElementById('group-source-base'),
-    groupTarget: document.getElementById('group-target-base'),
+    groupMode1: document.getElementById('group-mode1-settings'),
     btnSaveSettings: document.getElementById('btn-save-settings'),
     btnCancelSettings: document.getElementById('btn-cancel-settings'),
+    btnCancelSettingsX: document.getElementById('btn-cancel-settings-x'),
+    btnResetSettings: document.getElementById('btn-reset-settings'),
+    btnClearProgress: document.getElementById('btn-clear-progress'),
+    btnToggleTheme: document.getElementById('btn-toggle-theme'),
     
     modalReview: document.getElementById('modal-review'),
     reviewLog: document.getElementById('review-log'),
-    btnCloseReview: document.getElementById('btn-close-review')
+    btnCloseReview: document.getElementById('btn-close-review'),
+    btnCloseReviewX: document.getElementById('btn-close-review-x'),
+
+    btnToggleView: document.getElementById('btn-toggle-view'),
+    drillCard: document.getElementById('drill-card'),
+    converterCard: document.getElementById('converter-card'),
+    convWidth: document.getElementById('conv-width'),
+    convHex: document.getElementById('conv-hex'),
+    convBin: document.getElementById('conv-bin'),
+    convOct: document.getElementById('conv-oct'),
+    convUdec: document.getElementById('conv-udec'),
+    convSdec: document.getElementById('conv-sdec'),
+    convAscii: document.getElementById('conv-ascii')
 };
+
+let settingsModal, reviewModal, confirmResetModal, confirmClearModal;
+let isConverterView = false;
 
 /**
  * Core Math & Masking (using BigInt to bypass 32-bit JS limitations)
@@ -169,7 +188,7 @@ const modes = {
             toStr = formatValue(val, to, bits);
         }
         
-        let text = `Convert ${from.toUpperCase()} to ${to.toUpperCase()}:<br><br><strong>${fromStr}</strong>`;
+        let text = `Convert ${from.toUpperCase()} to ${to.toUpperCase()}:<br><br><code>${fromStr}</code>`;
         
         let wrong = [];
         while (wrong.length < 3) {
@@ -193,11 +212,11 @@ const modes = {
         
         let text, answer, toGen;
         if (isSignedToHex) {
-            text = `Convert Signed Decimal (Two's Complement) to ${fromName}:<br><br><strong>${signedDec}</strong>`;
+            text = `Convert Signed Decimal (Two's Complement) to ${fromName}:<br><br><code>${signedDec}</code>`;
             answer = fromFormat;
             toGen = () => (fromFormat === hexStr) ? formatHex(generateRandom(bits), bits, state.settings.prefixFormatting) : formatBin(generateRandom(bits), bits, state.settings.prefixFormatting);
         } else {
-            text = `Convert ${fromName} to Signed Decimal (Two's Complement):<br><br><strong>${fromFormat}</strong>`;
+            text = `Convert ${fromName} to Signed Decimal (Two's Complement):<br><br><code>${fromFormat}</code>`;
             answer = signedDec;
             toGen = () => signExtend(generateRandom(bits), bits).toString();
         }
@@ -226,8 +245,8 @@ const modes = {
         let pre = state.settings.prefixFormatting ? '0x' : '';
         
         let text = isToLe 
-            ? `Convert Big-Endian Hex to Little-Endian Hex:<br><br><strong>${pre}${hexStr}</strong>`
-            : `Convert Little-Endian Hex to Big-Endian Hex:<br><br><strong>${pre}${leStr}</strong>`;
+            ? `Convert Big-Endian Hex to Little-Endian Hex:<br><br><code>${pre}${hexStr}</code>`
+            : `Convert Little-Endian Hex to Big-Endian Hex:<br><br><code>${pre}${leStr}</code>`;
             
         let answer = pre + (isToLe ? leStr : hexStr);
         
@@ -256,7 +275,7 @@ const modes = {
         
         if (op === '~') {
             result = (~a) & getMask(bits);
-            text = `Evaluate Bitwise NOT:<br><br><strong>~ ${fmt(a)}</strong>`;
+            text = `Evaluate Bitwise NOT:<br><br><code>~ ${fmt(a)}</code>`;
         } else if (op === '<<' || op === '>>') {
             let shiftMax = bits - 1;
             let shift = BigInt(Math.floor(Math.random() * shiftMax) + 1); 
@@ -265,12 +284,12 @@ const modes = {
             } else {
                 result = (a >> shift) & getMask(bits); // Logical right shift equivalent since we operate on BigInt and mask it
             }
-            text = `Evaluate Bitwise Shift:<br><br><strong>${fmt(a)} ${op} ${shift}</strong>`;
+            text = `Evaluate Bitwise Shift:<br><br><code>${fmt(a)} ${op} ${shift}</code>`;
         } else {
             if (op === '&') result = (a & b) & getMask(bits);
             if (op === '|') result = (a | b) & getMask(bits);
             if (op === '^') result = (a ^ b) & getMask(bits);
-            text = `Evaluate Expression:<br><br><strong>${fmt(a)} ${op} ${fmt(b)}</strong>`;
+            text = `Evaluate Expression:<br><br><code>${fmt(a)} ${op} ${fmt(b)}</code>`;
         }
         
         let answer = fmt(result);
@@ -304,7 +323,7 @@ const modes = {
             ? (signA === signB && signA !== signR)
             : (signA !== signB && signA !== signR);
             
-        let text = `ALU Operation (${bits}-bit):<br><br><strong>${formatHex(a, bits, true)} ${isAdd?'+':'-'} ${formatHex(b, bits, true)}</strong><br><br>Identify the resulting flags:`;
+        let text = `ALU Operation (${bits}-bit):<br><br><code>${formatHex(a, bits, true)} ${isAdd?'+':'-'} ${formatHex(b, bits, true)}</code><br><br>Identify the resulting flags:`;
         
         let answer = { ZF: zf, SF: sf, CF: cf, OF: of };
         return { text, answer, isFlags: true };
@@ -315,29 +334,132 @@ const modes = {
  * Controller Logic
  */
 function init() {
-    loadSettingsFromUI();
+    loadData();
+    syncUIWithSettings();
+    applyTheme();
     bindEvents();
+    bindConverterEvents();
+    updateScoreboard();
     startNewQuestion();
 }
 
+function loadData() {
+    try {
+        let savedSettings = localStorage.getItem('hexbin_settings');
+        if (savedSettings) {
+            state.settings = { ...state.settings, ...JSON.parse(savedSettings) };
+        }
+        let savedProgress = localStorage.getItem('hexbin_progress');
+        if (savedProgress) {
+            let progress = JSON.parse(savedProgress);
+            state.session.highestStreak = progress.highestStreak || 0;
+            state.session.streak = progress.streak || 0;
+            state.session.score = progress.score || { correct: 0, incorrect: 0 };
+        }
+    } catch (e) {
+        console.error('Error loading data', e);
+    }
+}
+
+function saveSettings() {
+    try {
+        localStorage.setItem('hexbin_settings', JSON.stringify(state.settings));
+    } catch (e) {
+        console.error('Error saving settings', e);
+    }
+}
+
+function saveProgress() {
+    try {
+        localStorage.setItem('hexbin_progress', JSON.stringify({
+            highestStreak: state.session.highestStreak,
+            streak: state.session.streak,
+            score: state.session.score
+        }));
+    } catch (e) {
+        console.error('Error saving progress', e);
+    }
+}
+
+function resetSettings() {
+    localStorage.removeItem('hexbin_settings');
+    state.settings = {
+        theme: 'dark', bitWidth: 8, inputMethod: 'random',
+        prefixFormatting: true, activeMode: 1, sourceBase: 'random', targetBase: 'random'
+    };
+    syncUIWithSettings();
+    applyTheme();
+    saveProgress();
+    settingsModal.hide();
+}
+
+function clearProgress() {
+    localStorage.removeItem('hexbin_progress');
+    state.session = {
+        streak: 0, highestStreak: 0, score: { correct: 0, incorrect: 0 }, history: []
+    };
+    updateScoreboard();
+    startNewQuestion();
+    settingsModal.hide();
+}
+
 function bindEvents() {
+    settingsModal = new bootstrap.Modal(document.getElementById('modal-settings'));
+    reviewModal = new bootstrap.Modal(document.getElementById('modal-review'));
+    confirmResetModal = new bootstrap.Modal(document.getElementById('modal-confirm-reset'));
+    confirmClearModal = new bootstrap.Modal(document.getElementById('modal-confirm-clear'));
+
     el.btnSettings.addEventListener('click', () => {
         updateBaseDropdowns(); // Ensure correct state on open
-        el.modalSettings.classList.remove('hidden');
+        settingsModal.show();
     });
     
     el.setMode.addEventListener('change', (e) => {
         let isMode1 = e.target.value === '1';
-        el.groupSource.style.display = isMode1 ? 'flex' : 'none';
-        el.groupTarget.style.display = isMode1 ? 'flex' : 'none';
+        el.groupMode1.style.display = isMode1 ? 'block' : 'none';
     });
     
     el.setSource.addEventListener('change', updateBaseDropdowns);
     el.setTarget.addEventListener('change', updateBaseDropdowns);
     
     el.btnCancelSettings.addEventListener('click', () => {
-        el.modalSettings.classList.add('hidden');
+        settingsModal.hide();
         syncUIWithSettings(); // Revert unsaved UI changes
+    });
+    
+    el.btnCancelSettingsX.addEventListener('click', () => {
+        settingsModal.hide();
+        syncUIWithSettings(); 
+    });
+    
+    el.btnResetSettings.addEventListener('click', () => confirmResetModal.show());
+    el.btnClearProgress.addEventListener('click', () => confirmClearModal.show());
+    
+    document.getElementById('btn-confirm-reset').addEventListener('click', () => {
+        resetSettings();
+        confirmResetModal.hide();
+    });
+    
+    document.getElementById('btn-confirm-clear').addEventListener('click', () => {
+        clearProgress();
+        confirmClearModal.hide();
+    });
+    
+    el.btnToggleView.addEventListener('click', () => {
+        isConverterView = !isConverterView;
+        if (isConverterView) {
+            el.drillCard.style.display = 'none';
+            el.converterCard.style.display = 'block';
+            el.btnToggleView.textContent = 'Back to Drill';
+            el.btnToggleView.classList.replace('btn-outline-warning', 'btn-outline-success');
+            document.querySelector('.streak-board').style.visibility = 'hidden';
+        } else {
+            el.drillCard.style.display = 'block';
+            el.converterCard.style.display = 'none';
+            el.btnToggleView.textContent = 'Converter';
+            el.btnToggleView.classList.replace('btn-outline-success', 'btn-outline-warning');
+            document.querySelector('.streak-board').style.visibility = 'visible';
+        }
     });
     
     el.btnSaveSettings.addEventListener('click', () => {
@@ -345,20 +467,57 @@ function bindEvents() {
             alert("Base Option 1 and Base Option 2 cannot be the same!");
             return;
         }
+        
+        let settingsChanged = false;
+        if (state.settings.activeMode !== parseInt(el.setMode.value) ||
+            state.settings.bitWidth !== parseInt(el.setWidth.value) ||
+            state.settings.inputMethod !== el.setInput.value ||
+            state.settings.prefixFormatting !== (el.setPrefix.value === 'true') ||
+            state.settings.sourceBase !== el.setSource.value ||
+            state.settings.targetBase !== el.setTarget.value) {
+            settingsChanged = true;
+        }
+
         loadSettingsFromUI();
-        el.modalSettings.classList.add('hidden');
+        settingsModal.hide();
+        saveSettings();
+        
+        if (settingsChanged) {
+            let isSubmitted = el.btnNext.style.display === 'inline-block';
+            if (!isSubmitted) {
+                state.session.score.incorrect++;
+                state.session.streak = 0;
+                
+                let q = state.currentQuestion;
+                let formattedCorrectAns = q.answer;
+                if (q.isFlags) {
+                    formattedCorrectAns = `ZF:${q.answer.ZF?1:0} SF:${q.answer.SF?1:0} CF:${q.answer.CF?1:0} OF:${q.answer.OF?1:0}`;
+                }
+                logHistory(q.text, 'ABORTED (Settings Changed)', formattedCorrectAns, false);
+                saveProgress();
+                updateScoreboard();
+            }
+            startNewQuestion();
+        }
+    });
+
+    el.btnToggleTheme.addEventListener('click', () => {
+        state.settings.theme = state.settings.theme === 'dark' ? 'light' : 'dark';
         applyTheme();
-        resetSession();
-        startNewQuestion();
+        saveSettings();
     });
 
     el.btnReview.addEventListener('click', () => {
         renderReviewLog();
-        el.modalReview.classList.remove('hidden');
+        reviewModal.show();
     });
     
     el.btnCloseReview.addEventListener('click', () => {
-        el.modalReview.classList.add('hidden');
+        reviewModal.hide();
+    });
+    
+    el.btnCloseReviewX.addEventListener('click', () => {
+        reviewModal.hide();
     });
 
     el.btnSkip.addEventListener('click', skipQuestion);
@@ -367,7 +526,6 @@ function bindEvents() {
 }
 
 function loadSettingsFromUI() {
-    state.settings.theme = el.setTheme.value;
     state.settings.bitWidth = parseInt(el.setWidth.value);
     state.settings.inputMethod = el.setInput.value;
     state.settings.prefixFormatting = el.setPrefix.value === 'true';
@@ -377,7 +535,6 @@ function loadSettingsFromUI() {
 }
 
 function syncUIWithSettings() {
-    el.setTheme.value = state.settings.theme;
     el.setWidth.value = state.settings.bitWidth;
     el.setInput.value = state.settings.inputMethod;
     el.setPrefix.value = state.settings.prefixFormatting ? 'true' : 'false';
@@ -386,8 +543,7 @@ function syncUIWithSettings() {
     el.setTarget.value = state.settings.targetBase;
     
     let isMode1 = state.settings.activeMode === 1;
-    el.groupSource.style.display = isMode1 ? 'flex' : 'none';
-    el.groupTarget.style.display = isMode1 ? 'flex' : 'none';
+    el.groupMode1.style.display = isMode1 ? 'block' : 'none';
     updateBaseDropdowns();
 }
 
@@ -405,13 +561,7 @@ function updateBaseDropdowns() {
 }
 
 function applyTheme() {
-    if (state.settings.theme === 'light') {
-        el.body.classList.add('theme-light');
-        el.body.classList.remove('theme-dark');
-    } else {
-        el.body.classList.add('theme-dark');
-        el.body.classList.remove('theme-light');
-    }
+    document.documentElement.setAttribute('data-bs-theme', state.settings.theme);
 }
 
 function resetSession() {
@@ -422,7 +572,7 @@ function resetSession() {
 }
 
 function startNewQuestion() {
-    el.feedback.className = 'feedback';
+    el.feedback.className = 'feedback fw-bold fs-5 mt-4 mb-3';
     el.feedback.textContent = '';
     el.btnNext.style.display = 'none';
     el.btnSkip.style.display = 'inline-block';
@@ -443,15 +593,22 @@ function renderInputUI() {
     if (q.isFlags) {
         // Mode 5 (Flags) - Always check boxes
         let group = document.createElement('div');
-        group.className = 'checkbox-group';
+        group.className = 'btn-group d-flex w-100 mb-3 shadow-sm';
+        group.setAttribute('role', 'group');
+        
         ['ZF', 'SF', 'CF', 'OF'].forEach(flag => {
-            let label = document.createElement('label');
-            label.className = 'checkbox-item';
             let chk = document.createElement('input');
             chk.type = 'checkbox';
+            chk.className = 'btn-check';
             chk.id = `chk-${flag}`;
-            label.appendChild(chk);
-            label.appendChild(document.createTextNode(flag));
+            chk.autocomplete = 'off';
+            
+            let label = document.createElement('label');
+            label.className = 'btn btn-outline-primary fw-bold fs-5';
+            label.setAttribute('for', `chk-${flag}`);
+            label.textContent = flag;
+            
+            group.appendChild(chk);
             group.appendChild(label);
         });
         el.inputContainer.appendChild(group);
@@ -463,11 +620,11 @@ function renderInputUI() {
         
         if (method === 'mc') {
             let grid = document.createElement('div');
-            grid.className = 'mc-grid';
+            grid.className = 'd-grid gap-2 d-md-flex justify-content-md-center flex-wrap w-100';
             let opts = [q.answer, ...q.wrong].sort(() => Math.random() - 0.5);
             opts.forEach(opt => {
                 let btn = document.createElement('button');
-                btn.className = 'mc-btn';
+                btn.className = 'btn btn-outline-primary btn-lg flex-fill font-monospace';
                 btn.textContent = opt;
                 btn.onclick = () => processAnswer(opt);
                 grid.appendChild(btn);
@@ -477,7 +634,7 @@ function renderInputUI() {
             let inp = document.createElement('input');
             inp.type = 'text';
             inp.id = 'text-answer';
-            inp.className = 'text-input';
+            inp.className = 'form-control form-control-lg text-center font-monospace';
             inp.placeholder = 'Enter value...';
             inp.autocomplete = 'off';
             inp.onkeypress = (e) => { if (e.key === 'Enter') submitTextOrFlags(); };
@@ -532,18 +689,22 @@ function processAnswer(userAnswer) {
 
     if (isCorrect) {
         el.feedback.textContent = '[ SUCCESS: Correct Match ]';
-        el.feedback.className = 'feedback success';
+        el.feedback.className = 'feedback fw-bold fs-5 mt-4 mb-3 text-success';
         state.session.score.correct++;
         state.session.streak++;
+        if (state.session.streak > state.session.highestStreak) {
+            state.session.highestStreak = state.session.streak;
+        }
     } else {
         el.feedback.textContent = `[ ERROR: Expected ${formattedCorrectAns} ]`;
-        el.feedback.className = 'feedback error';
+        el.feedback.className = 'feedback fw-bold fs-5 mt-4 mb-3 text-danger';
         state.session.score.incorrect++;
         state.session.streak = 0;
     }
 
     logHistory(q.text, formattedUserAns, formattedCorrectAns, isCorrect);
     updateScoreboard();
+    saveProgress();
     endQuestionState();
 }
 
@@ -555,13 +716,14 @@ function skipQuestion() {
     }
     
     el.feedback.textContent = `[ ABORTED: Correct answer is ${formattedCorrectAns} ]`;
-    el.feedback.className = 'feedback error';
+    el.feedback.className = 'feedback fw-bold fs-5 mt-4 mb-3 text-danger';
     
     state.session.score.incorrect++;
     state.session.streak = 0;
     
     logHistory(q.text, 'SKIPPED', formattedCorrectAns, false);
     updateScoreboard();
+    saveProgress();
     endQuestionState();
 }
 
@@ -577,6 +739,7 @@ function endQuestionState() {
 
 function updateScoreboard() {
     el.streakVal.textContent = state.session.streak;
+    el.bestStreakVal.textContent = state.session.highestStreak;
     el.scoreVal.textContent = `${state.session.score.correct} / ${state.session.score.incorrect}`;
 }
 
@@ -604,6 +767,83 @@ function renderReviewLog() {
             ${!log.isCorrect ? `<p class="log-a">Correct Answer: ${log.correctAns}</p>` : ''}
         `;
         el.reviewLog.appendChild(div);
+    });
+}
+
+function bindConverterEvents() {
+    const inputs = [el.convHex, el.convBin, el.convOct, el.convUdec, el.convSdec, el.convAscii];
+    
+    const updateConverter = (sourceId, value) => {
+        let bits = parseInt(el.convWidth.value);
+        let mask = getMask(bits);
+        let val = null;
+        
+        inputs.forEach(inp => inp.classList.remove('is-invalid'));
+        if (!value.trim()) {
+            inputs.forEach(inp => { if (inp.id !== sourceId) inp.value = ''; });
+            return;
+        }
+
+        try {
+            if (sourceId === 'conv-hex') {
+                let clean = value.replace(/0x/i, '').replace(/\s/g, '');
+                if (!/^[0-9a-fA-F]+$/.test(clean)) throw new Error();
+                val = BigInt('0x' + clean);
+            } else if (sourceId === 'conv-bin') {
+                let clean = value.replace(/0b/i, '').replace(/\s/g, '');
+                if (!/^[01]+$/.test(clean)) throw new Error();
+                val = BigInt('0b' + clean);
+            } else if (sourceId === 'conv-oct') {
+                let clean = value.replace(/\s/g, '');
+                if (!/^[0-7]+$/.test(clean)) throw new Error();
+                val = BigInt('0o' + clean);
+            } else if (sourceId === 'conv-udec') {
+                let clean = value.replace(/\s/g, '');
+                if (!/^[0-9]+$/.test(clean)) throw new Error();
+                val = BigInt(clean);
+            } else if (sourceId === 'conv-sdec') {
+                let clean = value.replace(/\s/g, '');
+                if (!/^-?[0-9]+$/.test(clean)) throw new Error();
+                let sVal = BigInt(clean);
+                if (sVal < 0n) {
+                    val = sVal + (1n << BigInt(bits));
+                } else {
+                    val = sVal;
+                }
+            } else if (sourceId === 'conv-ascii') {
+                val = 0n;
+                for (let i = 0; i < value.length; i++) {
+                    val = (val << 8n) | BigInt(value.charCodeAt(i));
+                }
+            }
+
+            if (val === null) throw new Error();
+            val = val & mask;
+
+            if (sourceId !== 'conv-hex') el.convHex.value = formatHex(val, bits, false);
+            if (sourceId !== 'conv-bin') el.convBin.value = formatBin(val, bits, false);
+            if (sourceId !== 'conv-oct') el.convOct.value = formatValue(val, 'oct', bits);
+            if (sourceId !== 'conv-udec') el.convUdec.value = val.toString();
+            if (sourceId !== 'conv-sdec') el.convSdec.value = signExtend(val, bits).toString();
+            if (sourceId !== 'conv-ascii') {
+                let asciiStr = formatAscii(val, bits).replace(/\0/g, '');
+                el.convAscii.value = asciiStr;
+            }
+        } catch (e) {
+            document.getElementById(sourceId).classList.add('is-invalid');
+            inputs.forEach(inp => { if (inp.id !== sourceId) inp.value = ''; });
+        }
+    };
+
+    inputs.forEach(inp => {
+        inp.addEventListener('input', (e) => updateConverter(e.target.id, e.target.value));
+    });
+    
+    el.convWidth.addEventListener('change', () => {
+        let activeInput = inputs.find(inp => inp.value !== '' && !inp.classList.contains('is-invalid'));
+        if (activeInput) {
+            updateConverter(activeInput.id, activeInput.value);
+        }
     });
 }
 
