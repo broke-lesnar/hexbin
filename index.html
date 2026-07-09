@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RE Base Converter</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --text-color: #00ff00;
+            --border-color: #00ff00;
+            --error-color: #ff3333;
+            --bg-hover: #1a232c;
+            --font-family: 'Consolas', 'Courier New', Courier, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            border: 1px solid var(--border-color);
+            padding: 25px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.15);
+            border-radius: 4px;
+            background-color: #050709;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 8px var(--text-color);
+            font-size: 1.6rem;
+            letter-spacing: 2px;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            font-weight: bold;
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .settings {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 500px) {
+            .settings {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .setting-group label {
+            margin-bottom: 6px;
+            color: #ccc;
+        }
+
+        select, input[type="text"] {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            font-family: var(--font-family);
+            font-size: 1rem;
+            outline: none;
+            transition: box-shadow 0.2s;
+        }
+
+        select:focus, input[type="text"]:focus {
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.4);
+        }
+
+        .quiz-area {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .question {
+            font-size: 1.6rem;
+            margin-bottom: 35px;
+            word-break: break-all;
+            line-height: 1.4;
+        }
+
+        .input-area {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            min-height: 150px;
+        }
+
+        .mc-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            width: 100%;
+        }
+        
+        @media (max-width: 480px) {
+            .mc-options {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        button {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 12px 20px;
+            cursor: pointer;
+            font-family: var(--font-family);
+            font-size: 1rem;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--bg-hover);
+            box-shadow: 0 0 12px rgba(0, 255, 0, 0.6);
+            transform: translateY(-1px);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            border-color: #555;
+            color: #555;
+            box-shadow: none;
+        }
+
+        .mc-btn {
+            padding: 15px;
+            font-size: 1.1rem;
+        }
+
+        .text-input-group {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .text-input-group input {
+            flex: 1;
+            font-size: 1.2rem;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .feedback {
+            margin-top: 25px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            min-height: 28px;
+            letter-spacing: 1px;
+        }
+
+        .feedback.correct {
+            color: var(--text-color);
+            text-shadow: 0 0 8px var(--text-color);
+        }
+
+        .feedback.incorrect {
+            color: var(--error-color);
+            text-shadow: 0 0 8px var(--error-color);
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>> RE_BASE_TRAINER.exe</h1>
+        
+        <div class="score-board">
+            <div>Correct: <span id="score-correct">0</span></div>
+            <div>Incorrect: <span id="score-incorrect">0</span></div>
+        </div>
+
+        <div class="settings">
+            <div class="setting-group">
+                <label for="bit-width">>> Bit-Width</label>
+                <select id="bit-width">
+                    <option value="8">8-bit (Byte)</option>
+                    <option value="16">16-bit (Word)</option>
+                    <option value="32">32-bit (Dword)</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label for="input-method">>> Input Method</label>
+                <select id="input-method">
+                    <option value="random">Randomize Per Question</option>
+                    <option value="mc">Always Multiple Choice</option>
+                    <option value="text">Always Text Input</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label for="hex-prefix">>> Hex Formatting</label>
+                <select id="hex-prefix">
+                    <option value="true">Include '0x' prefix</option>
+                    <option value="false">Exclude '0x' prefix</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="quiz-area">
+            <div class="question" id="question-text">Initializing sequence...</div>
+            <div class="input-area" id="input-area">
+                <!-- Dynamically populated based on mode -->
+            </div>
+            <div class="feedback" id="feedback"></div>
+            <div class="controls">
+                <button id="btn-show-answer">Show Answer</button>
+                <button id="btn-next" style="display: none;">Next Sequence -></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Core State
+        const state = {
+            score: { correct: 0, incorrect: 0 },
+            currentNumber: 0,
+            fromBase: 'bin',
+            toBase: 'hex',
+            correctAnswer: '',
+            hasAnswered: false,
+            settings: {
+                bitWidth: 8,
+                inputMethod: 'random',
+                usePrefix: true
+            }
+        };
+
+        // DOM Elements
+        const el = {
+            scoreCorrect: document.getElementById('score-correct'),
+            scoreIncorrect: document.getElementById('score-incorrect'),
+            bitWidth: document.getElementById('bit-width'),
+            inputMethod: document.getElementById('input-method'),
+            hexPrefix: document.getElementById('hex-prefix'),
+            questionText: document.getElementById('question-text'),
+            inputArea: document.getElementById('input-area'),
+            feedback: document.getElementById('feedback'),
+            btnShowAnswer: document.getElementById('btn-show-answer'),
+            btnNext: document.getElementById('btn-next')
+        };
+
+        // Event Bindings
+        el.bitWidth.addEventListener('change', updateSettings);
+        el.inputMethod.addEventListener('change', updateSettings);
+        el.hexPrefix.addEventListener('change', updateSettings);
+        el.btnShowAnswer.addEventListener('click', showAnswer);
+        el.btnNext.addEventListener('click', generateQuestion);
+
+        // Extensible Base Converters
+        const converters = {
+            bin: {
+                format: (num, width) => {
+                    let bin = num.toString(2).padStart(width, '0');
+                    // Add space every 4 bits
+                    return bin.match(/.{1,4}/g).join(' ');
+                },
+                parse: (str) => parseInt(str.replace(/\s/g, ''), 2),
+                name: 'Binary'
+            },
+            hex: {
+                format: (num, width, usePrefix) => {
+                    let hex = num.toString(16).padStart(width / 4, '0').toUpperCase();
+                    return (usePrefix ? '0x' : '') + hex;
+                },
+                parse: (str) => parseInt(str.replace(/0x/i, ''), 16),
+                name: 'Hexadecimal'
+            },
+            // Future extensions
+            dec: {
+                format: (num) => num.toString(10),
+                parse: (str) => parseInt(str, 10),
+                name: 'Decimal'
+            },
+            oct: {
+                format: (num, width) => {
+                    let digits = Math.ceil(width / 3);
+                    return num.toString(8).padStart(digits, '0');
+                },
+                parse: (str) => parseInt(str, 8),
+                name: 'Octal'
+            }
+        };
+
+        function updateSettings() {
+            state.settings.bitWidth = parseInt(el.bitWidth.value);
+            state.settings.inputMethod = el.inputMethod.value;
+            state.settings.usePrefix = el.hexPrefix.value === 'true';
+            generateQuestion();
+        }
+
+        function generateRandomNumber(bitWidth) {
+            if (bitWidth === 32) {
+                // Math.random() in JS returns double-precision float, safe up to 2^53.
+                return Math.floor(Math.random() * 4294967296);
+            }
+            return Math.floor(Math.random() * (1 << bitWidth));
+        }
+
+        function formatNumber(num, base) {
+            if (base === 'hex') {
+                return converters.hex.format(num, state.settings.bitWidth, state.settings.usePrefix);
+            }
+            return converters[base].format(num, state.settings.bitWidth);
+        }
+
+        function generateQuestion() {
+            state.hasAnswered = false;
+            el.feedback.textContent = '';
+            el.feedback.className = 'feedback';
+            el.btnShowAnswer.style.display = 'inline-block';
+            el.btnNext.style.display = 'none';
+
+            // Randomly select conversion direction
+            if (Math.random() > 0.5) {
+                state.fromBase = 'bin';
+                state.toBase = 'hex';
+            } else {
+                state.fromBase = 'hex';
+                state.toBase = 'bin';
+            }
+
+            state.currentNumber = generateRandomNumber(state.settings.bitWidth);
+            
+            const qStr = formatNumber(state.currentNumber, state.fromBase);
+            state.correctAnswer = formatNumber(state.currentNumber, state.toBase);
+
+            el.questionText.innerHTML = `Convert to ${converters[state.toBase].name}:<br><br><strong>${qStr}</strong>`;
+
+            let mode = state.settings.inputMethod;
+            if (mode === 'random') {
+                mode = Math.random() > 0.5 ? 'mc' : 'text';
+            }
+
+            renderInput(mode);
+        }
+
+        function renderInput(mode) {
+            el.inputArea.innerHTML = '';
+            
+            if (mode === 'mc') {
+                const options = generateOptions(state.currentNumber, state.toBase);
+                const optionsGrid = document.createElement('div');
+                optionsGrid.className = 'mc-options';
+
+                options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'mc-btn';
+                    btn.textContent = opt;
+                    btn.onclick = () => checkAnswer(opt);
+                    optionsGrid.appendChild(btn);
+                });
+                
+                el.inputArea.appendChild(optionsGrid);
+            } else {
+                const group = document.createElement('div');
+                group.className = 'text-input-group';
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = 'answer-input';
+                input.placeholder = `Enter ${converters[state.toBase].name}...`;
+                input.autocomplete = 'off';
+                
+                // Allow enter key submission
+                input.onkeypress = (e) => {
+                    if (e.key === 'Enter') checkAnswer(input.value);
+                };
+
+                const submitBtn = document.createElement('button');
+                submitBtn.textContent = 'Submit';
+                submitBtn.onclick = () => checkAnswer(input.value);
+
+                group.appendChild(input);
+                group.appendChild(submitBtn);
+                el.inputArea.appendChild(group);
+                
+                // Auto-focus input for convenience
+                setTimeout(() => input.focus(), 10);
+            }
+        }
+
+        function generateOptions(correctNum, toBase) {
+            const options = new Set([formatNumber(correctNum, toBase)]);
+            
+            while(options.size < 4) {
+                let wrongNum = generateRandomNumber(state.settings.bitWidth);
+                if (wrongNum !== correctNum) {
+                    options.add(formatNumber(wrongNum, toBase));
+                }
+            }
+            
+            // Shuffle options
+            return Array.from(options).sort(() => Math.random() - 0.5);
+        }
+
+        function normalizeString(str) {
+            return str.trim().toLowerCase().replace(/\s/g, '');
+        }
+
+        function checkAnswer(userAnswer) {
+            if (state.hasAnswered) return;
+            
+            const normalizedUser = normalizeString(userAnswer);
+            const normalizedCorrect = normalizeString(state.correctAnswer);
+
+            let isCorrect = normalizedUser === normalizedCorrect;
+            
+            // Fallback for hex if prefix is toggled on but user didn't type it
+            if (state.toBase === 'hex' && !isCorrect && state.settings.usePrefix) {
+                isCorrect = normalizedUser === normalizeString(state.correctAnswer.replace(/0x/i, ''));
+            }
+
+            if (isCorrect) {
+                el.feedback.textContent = '[ SUCCESS: Conversion Accurate ]';
+                el.feedback.className = 'feedback correct';
+                state.score.correct++;
+                el.scoreCorrect.textContent = state.score.correct;
+            } else {
+                el.feedback.textContent = `[ ERROR: Expected ${state.correctAnswer} ]`;
+                el.feedback.className = 'feedback incorrect';
+                state.score.incorrect++;
+                el.scoreIncorrect.textContent = state.score.incorrect;
+            }
+
+            endQuestion();
+        }
+
+        function showAnswer() {
+            if (state.hasAnswered) return;
+            
+            el.feedback.textContent = `[ ABORTED: Correct value is ${state.correctAnswer} ]`;
+            el.feedback.className = 'feedback incorrect';
+            state.score.incorrect++;
+            el.scoreIncorrect.textContent = state.score.incorrect;
+            
+            endQuestion();
+        }
+
+        function endQuestion() {
+            state.hasAnswered = true;
+            
+            // Disable all inputs
+            const inputs = el.inputArea.querySelectorAll('input, button');
+            inputs.forEach(i => i.disabled = true);
+            
+            el.btnShowAnswer.style.display = 'none';
+            el.btnNext.style.display = 'inline-block';
+            el.btnNext.focus();
+        }
+
+        // Initialize application
+        updateSettings();
+
+    </script>
+</body>
+</html>
