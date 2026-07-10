@@ -9,7 +9,8 @@ const state = {
         prefixFormatting: true,
         activeMode: 1,
         sourceBase: 'random',
-        targetBase: 'random'
+        targetBase: 'random',
+        difficulty: 'medium'
     },
     session: {
         streak: 0,
@@ -43,6 +44,7 @@ const el = {
     setInput: document.getElementById('set-input'),
     setPrefix: document.getElementById('set-prefix'),
     setMode: document.getElementById('set-mode'),
+    setDifficulty: document.getElementById('set-difficulty'),
     setSource: document.getElementById('set-source'),
     setTarget: document.getElementById('set-target'),
     groupMode1: document.getElementById('group-mode1-settings'),
@@ -327,6 +329,107 @@ const modes = {
         
         let answer = { ZF: zf, SF: sf, CF: cf, OF: of };
         return { text, answer, isFlags: true };
+    },
+
+    // Mode 6: Boolean Algebra & Gates
+    6: () => {
+        let diff = state.settings.difficulty;
+        let text, answer, wrong;
+        
+        const randBit = () => Math.random() > 0.5 ? 1 : 0;
+        
+        if (diff === 'easy') {
+            let type = Math.floor(Math.random() * 3);
+            if (type === 0) {
+                let a = randBit(), b = randBit();
+                let gates = ['AND', 'OR', 'XOR', 'NAND', 'NOR'];
+                let gate = gates[Math.floor(Math.random() * gates.length)];
+                let res;
+                if (gate === 'AND') res = a & b;
+                if (gate === 'OR') res = a | b;
+                if (gate === 'XOR') res = a ^ b;
+                if (gate === 'NAND') res = ~(a & b) & 1;
+                if (gate === 'NOR') res = ~(a | b) & 1;
+                text = `Evaluate:<br><br><code>A=${a}, B=${b}</code><br><code>A ${gate} B</code>`;
+                answer = String(res);
+                wrong = [String(res ^ 1)];
+            } else if (type === 1) {
+                let expr = Math.random() > 0.5 ? `A AND NOT A` : `A OR NOT A`;
+                let ans = expr.includes('AND') ? '0' : '1';
+                text = `Evaluate Basic Theorem:<br><br><code>${expr}</code>`;
+                answer = ans;
+                wrong = [ans === '0' ? '1' : '0'];
+            } else {
+                let qs = [
+                    { q: "Outputs 1 if and only if all inputs are 1", a: "AND", w: ["OR", "XOR", "NAND"] },
+                    { q: "Outputs 1 if any input is 1", a: "OR", w: ["AND", "XOR", "NOR"] },
+                    { q: "Outputs 1 only when inputs are different", a: "XOR", w: ["AND", "OR", "XNOR"] },
+                    { q: "Outputs 0 if and only if all inputs are 1", a: "NAND", w: ["AND", "NOR", "OR"] }
+                ];
+                let item = qs[Math.floor(Math.random() * qs.length)];
+                text = `Identify the Logic Gate:<br><br><code>${item.q}</code>`;
+                answer = item.a;
+                wrong = item.w.sort(() => Math.random() - 0.5).slice(0, 3);
+            }
+        } else if (diff === 'medium') {
+            let type = Math.floor(Math.random() * 2);
+            if (type === 0) {
+                let a = randBit(), b = randBit(), c = randBit();
+                let ops = ['AND', 'OR', 'XOR'];
+                let op1 = ops[Math.floor(Math.random() * ops.length)];
+                let op2 = ops[Math.floor(Math.random() * ops.length)];
+                let hasNot = Math.random() > 0.5;
+                let expr, res;
+                if (hasNot) {
+                    expr = `(A ${op1} B) ${op2} (NOT C)`;
+                    let r1 = op1 === 'AND' ? (a&b) : (op1 === 'OR' ? (a|b) : (a^b));
+                    let nc = c ^ 1;
+                    res = op2 === 'AND' ? (r1&nc) : (op2 === 'OR' ? (r1|nc) : (r1^nc));
+                } else {
+                    expr = `(A ${op1} B) ${op2} C`;
+                    let r1 = op1 === 'AND' ? (a&b) : (op1 === 'OR' ? (a|b) : (a^b));
+                    res = op2 === 'AND' ? (r1&c) : (op2 === 'OR' ? (r1|c) : (r1^c));
+                }
+                text = `Evaluate:<br><br><code>A=${a}, B=${b}, C=${c}</code><br><code>${expr}</code>`;
+                answer = String(res);
+                wrong = [String(res ^ 1)];
+            } else {
+                let qs = [
+                    { q: "NOT (A OR B)", a: "NOT A AND NOT B", w: ["NOT A OR NOT B", "A AND B", "A OR B"] },
+                    { q: "NOT (A AND B)", a: "NOT A OR NOT B", w: ["NOT A AND NOT B", "A OR B", "A AND B"] },
+                    { q: "A OR (A AND B)", a: "A", w: ["B", "A OR B", "A AND B"] },
+                    { q: "A AND (A OR B)", a: "A", w: ["B", "A AND B", "A OR B"] }
+                ];
+                let item = qs[Math.floor(Math.random() * qs.length)];
+                text = `Simplify or apply De Morgan's:<br><br><code>${item.q}</code>`;
+                answer = item.a;
+                wrong = item.w;
+            }
+        } else {
+            let type = Math.floor(Math.random() * 2);
+            if (type === 0) {
+                let a = randBit(), b = randBit(), c = randBit(), d = randBit();
+                let expr = `(A XOR B) NAND (C NOR D)`;
+                let r1 = a ^ b;
+                let r2 = ~(c | d) & 1;
+                let res = ~(r1 & r2) & 1;
+                text = `Evaluate Complex Logic:<br><br><code>A=${a}, B=${b}, C=${c}, D=${d}</code><br><code>${expr}</code>`;
+                answer = String(res);
+                wrong = [String(res ^ 1)];
+            } else {
+                let qs = [
+                    { q: "A XOR B", a: "(A AND NOT B) OR (NOT A AND B)", w: ["(A OR NOT B) AND (NOT A OR B)", "(A AND B) OR (NOT A AND NOT B)", "NOT A AND NOT B OR A AND B"] },
+                    { q: "A XNOR B", a: "(A AND B) OR (NOT A AND NOT B)", w: ["(A AND NOT B) OR (NOT A AND B)", "(A OR B) AND (NOT A OR NOT B)", "NOT (A AND B) OR NOT (A OR B)"] },
+                    { q: "Majority function (A,B,C)", a: "(A AND B) OR (B AND C) OR (A AND C)", w: ["(A OR B) AND (B OR C) AND (A OR C)", "A XOR B XOR C", "(A AND B AND C) OR NOT (A OR B OR C)"] }
+                ];
+                let item = qs[Math.floor(Math.random() * qs.length)];
+                text = `Identify the Equivalent Expression:<br><br><code>${item.q}</code>`;
+                answer = item.a;
+                wrong = item.w;
+            }
+        }
+        
+        return { text, answer, wrong, forceMC: true };
     }
 };
 
@@ -385,7 +488,8 @@ function resetSettings() {
     localStorage.removeItem('hexbin_settings');
     state.settings = {
         theme: 'dark', bitWidth: 8, inputMethod: 'random',
-        prefixFormatting: true, activeMode: 1, sourceBase: 'random', targetBase: 'random'
+        prefixFormatting: true, activeMode: 1, sourceBase: 'random', targetBase: 'random',
+        difficulty: 'medium'
     };
     syncUIWithSettings();
     applyTheme();
@@ -473,6 +577,7 @@ function bindEvents() {
             state.settings.bitWidth !== parseInt(el.setWidth.value) ||
             state.settings.inputMethod !== el.setInput.value ||
             state.settings.prefixFormatting !== (el.setPrefix.value === 'true') ||
+            state.settings.difficulty !== el.setDifficulty.value ||
             state.settings.sourceBase !== el.setSource.value ||
             state.settings.targetBase !== el.setTarget.value) {
             settingsChanged = true;
@@ -541,6 +646,7 @@ function loadSettingsFromUI() {
     state.settings.inputMethod = el.setInput.value;
     state.settings.prefixFormatting = el.setPrefix.value === 'true';
     state.settings.activeMode = parseInt(el.setMode.value);
+    state.settings.difficulty = el.setDifficulty.value;
     state.settings.sourceBase = el.setSource.value;
     state.settings.targetBase = el.setTarget.value;
 }
@@ -550,6 +656,7 @@ function syncUIWithSettings() {
     el.setInput.value = state.settings.inputMethod;
     el.setPrefix.value = state.settings.prefixFormatting ? 'true' : 'false';
     el.setMode.value = state.settings.activeMode;
+    if (el.setDifficulty) el.setDifficulty.value = state.settings.difficulty || 'medium';
     el.setSource.value = state.settings.sourceBase;
     el.setTarget.value = state.settings.targetBase;
     
@@ -625,8 +732,9 @@ function renderInputUI() {
         el.inputContainer.appendChild(group);
         el.btnSubmit.style.display = 'inline-block';
     } else {
-        // Modes 1-4
+        // Modes 1-4, 6
         let method = state.settings.inputMethod;
+        if (q.forceMC) method = 'mc';
         if (method === 'random') method = Math.random() > 0.5 ? 'mc' : 'text';
         
         if (method === 'mc') {
