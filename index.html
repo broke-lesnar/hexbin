@@ -31,8 +31,9 @@
     <main class="container flex-grow-1 d-flex flex-column align-items-center justify-content-center py-5">
         
         <!-- Drill Card -->
-        <div id="drill-card" class="card w-100 shadow-sm" style="max-width: 800px;">
+        <div id="drill-card" class="card w-100 shadow-sm position-relative" style="max-width: 800px;">
             <div class="card-body p-4 p-md-5 text-center">
+                <button id="btn-skip" class="btn btn-link btn-sm text-decoration-none text-muted position-absolute" style="top: 15px; right: 15px; z-index: 10;" title="Shortcut: Escape">Skip / Show Answer</button>
                 <div id="question-text" class="question fs-4 mb-4">Initializing Core Systems...</div>
                 
                 <div id="input-container" class="input-container w-100 mx-auto" style="max-width: 550px; min-height: 120px;">
@@ -41,10 +42,9 @@
 
                 <div id="feedback" class="feedback fw-bold fs-5 mt-4 mb-3" style="min-height: 30px;"></div>
 
-                <div class="actions d-flex justify-content-center gap-3 mt-4">
-                    <button id="btn-submit" class="btn btn-primary btn-lg" style="display:none;">Submit</button>
-                    <button id="btn-skip" class="btn btn-warning btn-lg">Skip / Show Answer</button>
-                    <button id="btn-next" class="btn btn-success btn-lg" style="display:none;">Next Question &rarr;</button>
+                <div class="actions d-flex justify-content-center mt-4">
+                    <button id="btn-submit" class="btn btn-primary btn-lg px-5 py-3 fs-5 shadow-sm w-100" style="display:none; max-width: 320px;">Submit</button>
+                    <button id="btn-next" class="btn btn-success btn-lg px-5 py-3 fs-5 shadow-sm w-100" style="display:none; max-width: 320px;">Next Question &rarr;</button>
                 </div>
             </div>
         </div>

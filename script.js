@@ -523,6 +523,17 @@ function bindEvents() {
     el.btnSkip.addEventListener('click', skipQuestion);
     el.btnNext.addEventListener('click', startNewQuestion);
     el.btnSubmit.addEventListener('click', submitTextOrFlags);
+
+    // Global keyboard listener for Escape key to Skip / Show Answer
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            let isModalOpen = document.querySelector('.modal.show') !== null;
+            if (!isModalOpen && el.btnSkip && el.btnSkip.style.display !== 'none' && !isConverterView) {
+                e.preventDefault();
+                skipQuestion();
+            }
+        }
+    });
 }
 
 function loadSettingsFromUI() {
