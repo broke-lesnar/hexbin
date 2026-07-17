@@ -334,99 +334,139 @@ const modes = {
     // Mode 6: Boolean Algebra & Gates
     6: () => {
         let diff = state.settings.difficulty;
-        let text, answer, wrong;
-        
+        let type = Math.floor(Math.random() * 5); // 0: Gates, 1: Laws, 2: Canonical, 3: Truth Table, 4: K-Map
+        let text, answer, wrong = [];
         const randBit = () => Math.random() > 0.5 ? 1 : 0;
-        
+
         if (diff === 'easy') {
-            let type = Math.floor(Math.random() * 3);
-            if (type === 0) {
-                let a = randBit(), b = randBit();
-                let gates = ['AND', 'OR', 'XOR', 'NAND', 'NOR'];
-                let gate = gates[Math.floor(Math.random() * gates.length)];
-                let res;
-                if (gate === 'AND') res = a & b;
-                if (gate === 'OR') res = a | b;
-                if (gate === 'XOR') res = a ^ b;
-                if (gate === 'NAND') res = ~(a & b) & 1;
-                if (gate === 'NOR') res = ~(a | b) & 1;
-                text = `Evaluate:<br><br><code>A=${a}, B=${b}</code><br><code>A ${gate} B</code>`;
-                answer = String(res);
-                wrong = [String(res ^ 1)];
-            } else if (type === 1) {
-                let expr = Math.random() > 0.5 ? `A AND NOT A` : `A OR NOT A`;
-                let ans = expr.includes('AND') ? '0' : '1';
-                text = `Evaluate Basic Theorem:<br><br><code>${expr}</code>`;
-                answer = ans;
-                wrong = [ans === '0' ? '1' : '0'];
+            type = Math.floor(Math.random() * 4); // Exclude K-Map
+        }
+        
+        if (type === 0) {
+            // Textual Logic Circuit
+            let a = randBit(), b = randBit(), c = randBit();
+            let ops = ['AND', 'OR', 'XOR'];
+            let op1 = ops[Math.floor(Math.random() * ops.length)];
+            let res;
+            
+            if (diff === 'easy') {
+                res = op1 === 'AND' ? (a&b) : (op1 === 'OR' ? (a|b) : (a^b));
+                text = `Evaluate the logic circuit:<br><br>
+                <div class="logic-circuit">
+A (${a}) ───┐
+         ├──[ ${op1.padEnd(3)} ]─── Y (?)
+B (${b}) ───┘
+                </div>`;
             } else {
-                let qs = [
-                    { q: "Outputs 1 if and only if all inputs are 1", a: "AND", w: ["OR", "XOR", "NAND"] },
-                    { q: "Outputs 1 if any input is 1", a: "OR", w: ["AND", "XOR", "NOR"] },
-                    { q: "Outputs 1 only when inputs are different", a: "XOR", w: ["AND", "OR", "XNOR"] },
-                    { q: "Outputs 0 if and only if all inputs are 1", a: "NAND", w: ["AND", "NOR", "OR"] }
-                ];
-                let item = qs[Math.floor(Math.random() * qs.length)];
-                text = `Identify the Logic Gate:<br><br><code>${item.q}</code>`;
-                answer = item.a;
-                wrong = item.w.sort(() => Math.random() - 0.5).slice(0, 3);
-            }
-        } else if (diff === 'medium') {
-            let type = Math.floor(Math.random() * 2);
-            if (type === 0) {
-                let a = randBit(), b = randBit(), c = randBit();
-                let ops = ['AND', 'OR', 'XOR'];
-                let op1 = ops[Math.floor(Math.random() * ops.length)];
                 let op2 = ops[Math.floor(Math.random() * ops.length)];
-                let hasNot = Math.random() > 0.5;
-                let expr, res;
-                if (hasNot) {
-                    expr = `(A ${op1} B) ${op2} (NOT C)`;
-                    let r1 = op1 === 'AND' ? (a&b) : (op1 === 'OR' ? (a|b) : (a^b));
-                    let nc = c ^ 1;
-                    res = op2 === 'AND' ? (r1&nc) : (op2 === 'OR' ? (r1|nc) : (r1^nc));
-                } else {
-                    expr = `(A ${op1} B) ${op2} C`;
-                    let r1 = op1 === 'AND' ? (a&b) : (op1 === 'OR' ? (a|b) : (a^b));
-                    res = op2 === 'AND' ? (r1&c) : (op2 === 'OR' ? (r1|c) : (r1^c));
-                }
-                text = `Evaluate:<br><br><code>A=${a}, B=${b}, C=${c}</code><br><code>${expr}</code>`;
-                answer = String(res);
-                wrong = [String(res ^ 1)];
-            } else {
-                let qs = [
-                    { q: "NOT (A OR B)", a: "NOT A AND NOT B", w: ["NOT A OR NOT B", "A AND B", "A OR B"] },
-                    { q: "NOT (A AND B)", a: "NOT A OR NOT B", w: ["NOT A AND NOT B", "A OR B", "A AND B"] },
-                    { q: "A OR (A AND B)", a: "A", w: ["B", "A OR B", "A AND B"] },
-                    { q: "A AND (A OR B)", a: "A", w: ["B", "A AND B", "A OR B"] }
-                ];
-                let item = qs[Math.floor(Math.random() * qs.length)];
-                text = `Simplify or apply De Morgan's:<br><br><code>${item.q}</code>`;
-                answer = item.a;
-                wrong = item.w;
+                let r1 = op1 === 'AND' ? (a&b) : (op1 === 'OR' ? (a|b) : (a^b));
+                res = op2 === 'AND' ? (r1&c) : (op2 === 'OR' ? (r1|c) : (r1^c));
+                text = `Evaluate the logic circuit:<br><br>
+                <div class="logic-circuit">
+A (${a}) ───┐
+         ├──[ ${op1.padEnd(3)} ]─── X ───┐
+B (${b}) ───┘                  ├──[ ${op2.padEnd(3)} ]─── Y (?)
+C (${c}) ──────────────────────┘
+                </div>`;
             }
+            answer = String(res);
+            wrong = [String(res ^ 1)];
+            
+        } else if (type === 1) {
+            // Boolean Law Identification
+            let qs = [
+                { q: "A + (A &middot; B) = A", a: "Absorption Law", w: ["Distributive Law", "Idempotent Law", "De Morgan's Law"] },
+                { q: "A + A = A", a: "Idempotent Law", w: ["Identity Law", "Annulment Law", "Complement Law"] },
+                { q: "A &middot; 0 = 0", a: "Annulment Law", w: ["Identity Law", "Absorption Law", "Inverse Law"] },
+                { q: "A + (B + C) = (A + B) + C", a: "Associative Law", w: ["Commutative Law", "Distributive Law", "Absorption Law"] },
+                { q: "A &middot; (B + C) = (A &middot; B) + (A &middot; C)", a: "Distributive Law", w: ["Associative Law", "Commutative Law", "De Morgan's Law"] },
+                { q: "NOT (A + B) = NOT A &middot; NOT B", a: "De Morgan's Law", w: ["Distributive Law", "Absorption Law", "Involution Law"] }
+            ];
+            let item = qs[Math.floor(Math.random() * qs.length)];
+            text = `Identify the Boolean Algebra law:<br><br><code>${item.q}</code>`;
+            answer = item.a;
+            wrong = item.w.sort(() => Math.random() - 0.5).slice(0, 3);
+            
+        } else if (type === 2) {
+            // Canonical Forms
+            let qs = [
+                { q: "Output is 1 when A=0, B=1", a: "NOT A AND B", w: ["A AND NOT B", "A AND B", "NOT A AND NOT B"] },
+                { q: "Minterm expression for m3 (2 variables)", a: "A AND B", w: ["A AND NOT B", "NOT A AND B", "NOT A AND NOT B"] },
+                { q: "Output is 1 when A=1, B=0, C=1", a: "A AND NOT B AND C", w: ["A AND B AND C", "NOT A AND NOT B AND C", "A AND NOT B AND NOT C"] },
+                { q: "Maxterm expression for M0 (2 variables)", a: "A OR B", w: ["NOT A OR B", "A OR NOT B", "NOT A OR NOT B"] }
+            ];
+            let item = qs[Math.floor(Math.random() * qs.length)];
+            text = `Identify the canonical expression:<br><br><code>${item.q}</code>`;
+            answer = item.a;
+            wrong = item.w.sort(() => Math.random() - 0.5).slice(0, 3);
+            
+        } else if (type === 3) {
+            // Truth Table
+            let op = ['AND', 'OR', 'XOR', 'NAND', 'NOR'][Math.floor(Math.random() * 5)];
+            let missingIndex = Math.floor(Math.random() * 4);
+            let rows = "";
+            let expectedOutput;
+            
+            for(let i=0; i<4; i++) {
+                let va = (i >> 1) & 1;
+                let vb = i & 1;
+                let vy;
+                if (op === 'AND') vy = va & vb;
+                if (op === 'OR') vy = va | vb;
+                if (op === 'XOR') vy = va ^ vb;
+                if (op === 'NAND') vy = ~(va & vb) & 1;
+                if (op === 'NOR') vy = ~(va | vb) & 1;
+                
+                let yDisp = (i === missingIndex) ? "?" : vy;
+                if (i === missingIndex) expectedOutput = String(vy);
+                
+                rows += `<tr><td>${va}</td><td>${vb}</td><td class="fw-bold">${yDisp}</td></tr>`;
+            }
+            
+            text = `Find the missing value (?) in the <strong>${op}</strong> truth table:<br><br>
+            <table class="truth-table">
+                <tr><th>A</th><th>B</th><th>Y</th></tr>
+                ${rows}
+            </table>`;
+            
+            answer = expectedOutput;
+            wrong = [String(expectedOutput ^ 1)];
+            
         } else {
-            let type = Math.floor(Math.random() * 2);
-            if (type === 0) {
-                let a = randBit(), b = randBit(), c = randBit(), d = randBit();
-                let expr = `(A XOR B) NAND (C NOR D)`;
-                let r1 = a ^ b;
-                let r2 = ~(c | d) & 1;
-                let res = ~(r1 & r2) & 1;
-                text = `Evaluate Complex Logic:<br><br><code>A=${a}, B=${b}, C=${c}, D=${d}</code><br><code>${expr}</code>`;
-                answer = String(res);
-                wrong = [String(res ^ 1)];
-            } else {
-                let qs = [
-                    { q: "A XOR B", a: "(A AND NOT B) OR (NOT A AND B)", w: ["(A OR NOT B) AND (NOT A OR B)", "(A AND B) OR (NOT A AND NOT B)", "NOT A AND NOT B OR A AND B"] },
-                    { q: "A XNOR B", a: "(A AND B) OR (NOT A AND NOT B)", w: ["(A AND NOT B) OR (NOT A AND B)", "(A OR B) AND (NOT A OR NOT B)", "NOT (A AND B) OR NOT (A OR B)"] },
-                    { q: "Majority function (A,B,C)", a: "(A AND B) OR (B AND C) OR (A AND C)", w: ["(A OR B) AND (B OR C) AND (A OR C)", "A XOR B XOR C", "(A AND B AND C) OR NOT (A OR B OR C)"] }
-                ];
-                let item = qs[Math.floor(Math.random() * qs.length)];
-                text = `Identify the Equivalent Expression:<br><br><code>${item.q}</code>`;
-                answer = item.a;
-                wrong = item.w;
-            }
+            // K-Map Simplification (2 variables)
+            let kmaps = [
+                { grid: [1, 1, 1, 1], ans: "1", w: ["A", "B", "A OR B"] },
+                { grid: [0, 0, 0, 0], ans: "0", w: ["NOT A", "NOT B", "A AND B"] },
+                { grid: [1, 1, 0, 0], ans: "NOT A", w: ["A", "B", "NOT B"] },
+                { grid: [0, 0, 1, 1], ans: "A", w: ["NOT A", "B", "NOT B"] },
+                { grid: [1, 0, 1, 0], ans: "NOT B", w: ["B", "A", "NOT A"] },
+                { grid: [0, 1, 0, 1], ans: "B", w: ["NOT B", "A", "NOT A"] },
+                { grid: [1, 0, 0, 0], ans: "NOT A AND NOT B", w: ["A AND B", "NOT A OR NOT B", "A OR B"] },
+                { grid: [0, 1, 1, 1], ans: "A OR B", w: ["A AND B", "NOT A AND NOT B", "A XOR B"] }
+            ];
+            let item = kmaps[Math.floor(Math.random() * kmaps.length)];
+            
+            text = `Simplify the expression using the Karnaugh Map:<br><br>
+            <table class="kmap-grid">
+                <tr>
+                    <td style="border:none; background:transparent;"></td>
+                    <th class="kmap-header-top">B=0</th>
+                    <th class="kmap-header-top">B=1</th>
+                </tr>
+                <tr>
+                    <th class="kmap-header-side">A=0</th>
+                    <td>${item.grid[0]}</td>
+                    <td>${item.grid[1]}</td>
+                </tr>
+                <tr>
+                    <th class="kmap-header-side">A=1</th>
+                    <td>${item.grid[2]}</td>
+                    <td>${item.grid[3]}</td>
+                </tr>
+            </table>`;
+            
+            answer = item.ans;
+            wrong = item.w.sort(() => Math.random() - 0.5).slice(0, 3);
         }
         
         return { text, answer, wrong, forceMC: true };

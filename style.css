@@ -26,3 +26,56 @@ code {
 .log-entry.incorrect {
     border-left: 6px solid var(--bs-danger);
 }
+
+/* Boolean Logic Drill Styles */
+.truth-table {
+    margin: 0 auto;
+    border-collapse: collapse;
+    width: auto;
+    min-width: 150px;
+    background-color: var(--bs-tertiary-bg);
+}
+.truth-table th, .truth-table td {
+    border: 1px solid var(--bs-border-color);
+    padding: 0.25rem 0.75rem;
+    text-align: center;
+}
+.truth-table th {
+    background-color: var(--bs-secondary-bg);
+    color: var(--bs-primary);
+}
+
+.kmap-grid {
+    margin: 0 auto;
+    border-collapse: collapse;
+    background-color: var(--bs-tertiary-bg);
+}
+.kmap-grid th, .kmap-grid td {
+    border: 1px solid var(--bs-border-color);
+    padding: 0.4rem 0.8rem;
+    text-align: center;
+}
+.kmap-grid th {
+    background-color: var(--bs-secondary-bg);
+    color: var(--bs-info);
+    font-weight: bold;
+}
+.kmap-grid .kmap-header-top {
+    border-bottom: 2px solid var(--bs-border-color);
+}
+.kmap-grid .kmap-header-side {
+    border-right: 2px solid var(--bs-border-color);
+}
+
+.logic-circuit {
+    font-family: 'Consolas', 'Courier New', Courier, monospace;
+    background-color: var(--bs-secondary-bg);
+    color: var(--bs-body-color);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    white-space: pre;
+    text-align: left;
+    display: inline-block;
+    border: 1px solid var(--bs-border-color);
+    line-height: 1.2;
+}
